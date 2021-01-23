@@ -24,8 +24,17 @@
 //##########################################################################################################
 //#include "arbitro.h"
 #define MAXP 5
+pcliente listaPessoas = NULL;
+int espera = 0;
+int numJogadores = 0;
 int mp=0;
 int duracaoCampeonato,tempoEspera;
+int fd; // pipe do servidor
+int fdescrita; // pipe do cliente
+pthread_t threadEspera;
+pthread_t threadDuracao;
+
+
 
 
 
@@ -99,12 +108,14 @@ void trataSig(int i){
 ////////////////////////-threads-/////////////////////////////////////
 //fazer duas threds(uma para cada variavel de ambiente)
 void *CampeonatoTime(void *dados){
-	for(int i = 0;i<10;i++){
-		printf("blablalblal");
-		fflush(stdout);
-		sleep(1);
-	}
-	// sleep(duracaoCampeonato);
+	// for(int i = 0;i<10;i++){
+	// 	printf("blablalblal");
+	// 	fflush(stdout);
+	// 	sleep(1);
+	// }
+	sleep(duracaoCampeonato);
+	printf("THREAD ACORDOU");
+	espera = 1;
 	pthread_exit(NULL);  /* termina thread */
 }
 
@@ -322,13 +333,32 @@ while(aux != NULL)
    return lista;
 } 
 
-
+void trataTeclado(char* comando){
+	int i;
+	if(strcmp(comando,"players") == 0){
+		mostraJogadores(listaPessoas);
+	}
+	if(strcmp(comando,"games") == 0){
+		mostraJogos();
+	}
+	if(comando[0] == 'k'){
+		for(i=0;i<strlen(comando);i++){
+			comando[i] = comando[i+1];
+		}
+		
+	 listaPessoas = kickJogador(comando,listaPessoas,&numJogadores);
+	}
+	if(strcmp(comando,"exit") == 0){
+		//fechar pipes, limpar memoria
+		unlink(FIFO_SERV);
+		exit(EXIT_SUCCESS);
+		}
+}
 
 int main(int argc,char **argv){
 	
 	time_t c;
 	srand((unsigned) time(&c));
-	int numJogadores = 0;
 	int i=0;
 	int t;
 	
@@ -366,14 +396,11 @@ int main(int argc,char **argv){
 	printf("\n\nNumero maximo de jogadores e de :-%d-\n",mp);
 	printf("duracao do campeonato:%d\ntempo:%d\n\n",duracaoCampeonato,tempoEspera); 
 
-	pcliente listaPessoas = NULL;
 	Cliente pessoa;
 
 	// thread para a duracao do campeonato
-	pthread_t threadDuracao;
     pthread_create(&threadDuracao, NULL, CampeonatoTime,(void *) NULL);
 	// thread para o tempo de espera que ele tem pelos jogadores
-	pthread_t threadEspera;
 	pthread_create(&threadEspera,NULL,esperaJogadores,(void *)NULL);
 
 
@@ -385,10 +412,9 @@ int main(int argc,char **argv){
 		exit(5);
 	}
 
-	int fd;
+
 	int num;
 	int res;
-	int fdescrita;
 	char fifo[40],comando[40];
 	fd_set fds;
 
@@ -398,7 +424,7 @@ int main(int argc,char **argv){
 			exit(EXIT_FAILURE);
 	}
 
-	printf("Fifo foi aberto!\n\n");
+	printf("Servidor foi aberto em modo nao bloqueante!\n\n");
 	printf("Consola do arbitro\n");
 	setbuf(stdout,NULL);  
 	do{
@@ -410,33 +436,24 @@ int main(int argc,char **argv){
 		FD_SET(fd,&fds);
 
 		res = select(fd + 1,&fds,NULL,NULL,NULL);  // BLOQUEIA AQUI ATE RECEBER
+
 		if(res > 0 && FD_ISSET(0,&fds)){ //  ---- veio do stdin,teclado;
 				//fgets(comando,49,stdin);
 				scanf("%s",comando);
 				fflush(stdout);
 
-				if(strcmp(comando,"players") == 0){
-					mostraJogadores(listaPessoas);
-				}
-				if(strcmp(comando,"games") == 0){
-					mostraJogos();
-				}
-				if(comando[0] == 'k'){
-					for(i=0;i<strlen(comando);i++){
-						comando[i] = comando[i+1];
-					}
-					listaPessoas = kickJogador(comando,listaPessoas,&numJogadores);
-				}
-				if(strcmp(comando,"exit") == 0){
-					//fechar pipes, limpar memoria
-					unlink(FIFO_SERV);
-					exit(EXIT_SUCCESS);
-				}
+				trataTeclado(comando);
 		}
-		
-	else if(res > 0 && FD_ISSET(fd,&fds)){ // fd corresponde ao pipe
+	
+	 else if(res > 0 && FD_ISSET(fd,&fds)){ // fd corresponde ao pipe
 		// PARTE DE LER DO CLIENTE abrir o fifo do cliente para ler o que ele enviou
-		
+		if(espera == 1){
+			printf("Campeonato terminou!");
+			strcpy(comando,"exit");
+			printf("abc");
+		}
+		// pthread_join(threadDuracao,NULL);
+
 		num = read(fd,&pessoa,sizeof(Cliente)); // ler do pipe do servidor o que o cliente escreveu para la;
 		if(num == -1){
 			printf("\nErro ao ler dados do cliente");
@@ -476,6 +493,7 @@ int main(int argc,char **argv){
 			printf("\nErro ao enviar dados para o cliente\n");
 			exit(EXIT_FAILURE);
 		}
+		
 
 		close(fdescrita);
 	}
