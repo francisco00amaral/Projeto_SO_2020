@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <dirent.h> 
+#include <pthread.h> 
 #include "utils.h"
 
 //##########################################################################################################
@@ -97,11 +98,20 @@ void trataSig(int i){
 
 ////////////////////////-threads-/////////////////////////////////////
 //fazer duas threds(uma para cada variavel de ambiente)
-void * Duracao(void *dados){
-	sleep(duracaoCampeonato);
+void *CampeonatoTime(void *dados){
+	for(int i = 0;i<10;i++){
+		printf("blablalblal");
+		fflush(stdout);
+		sleep(1);
+	}
+	// sleep(duracaoCampeonato);
+	pthread_exit(NULL);  /* termina thread */
+}
 
 
-
+void *esperaJogadores(void *dados){
+	sleep(tempoEspera);
+	pthread_exit(NULL);
 }
 ///////////////////////////////////////////////////////////////////7
 
@@ -109,7 +119,6 @@ int verificaNome(pcliente lista,Cliente pessoa){
 	pcliente aux;
 	aux = lista;
 		if(aux == NULL){
-			printf("Nao ha jogadores em jogo!\n");
 			return 1;
 	}
 	while (aux != NULL)
@@ -117,8 +126,9 @@ int verificaNome(pcliente lista,Cliente pessoa){
 		if(strcmp(aux->nome,pessoa.nome) == 0 && aux->pid == pessoa.pid){
 			return 1;
 		}
-		else if(strcmp(aux->nome,pessoa.nome) == 0){
+	 	if(strcmp(aux->nome,pessoa.nome) == 0 && aux->pid != pessoa.pid){
 			printf("Já existe um jogador com esse nome, não irá jogar!");
+			return 0;
 		}
 		aux = aux->prox;
 	}
@@ -128,6 +138,13 @@ int verificaNome(pcliente lista,Cliente pessoa){
 pcliente adicionaLista(pcliente lista,Cliente pessoa,int *npessoas){
 		pcliente aux;
 		pcliente novo;
+
+		/*int a = verificaNome(lista,pessoa);
+
+		if(a == 0){
+		kill(pessoa.pid,SIGINT);
+		return lista;
+		} */
 
         
         if(lista == NULL) { // Lista vazia
@@ -146,20 +163,10 @@ pcliente adicionaLista(pcliente lista,Cliente pessoa,int *npessoas){
         	}
         	
         }
-        //aux->prox = novo;
+        aux->prox = novo;
     }
 
-        int a = verificaNome(lista,pessoa);
-
-		if(a == 0){
-		kill(pessoa.pid,SIGINT);
-		return lista;
-		}
-           
         //aux->prox = novo;
-    
-
-
 		if(*npessoas >= mp){
 			printf("Numero de jogadores chegou ao limite, %d",mp);
 			return lista;
@@ -332,15 +339,12 @@ int main(int argc,char **argv){
 		printf("sintaxe: %s duracao_do_campeonato tempo_de_espera\n\n",argv[0]);
 		return (EXIT_FAILURE);
 	}
-  pthread_t Duracao_do_Campeonato;
-  pthread_create(&Duracao_do_Campeonato, NULL, Duracao, NULL);
-
 
 	// METER ISTO NUMA FUNCAO
 	char *maxplayer;
 	maxplayer = getenv("MAXPLAYER");
 	if(maxplayer!= NULL){
-		mp = atoi(maxplayer);
+		mp = atoi(maxplayer); 
 		if(mp>30)
 			mp=30;
 		else if(mp==0)
@@ -364,7 +368,15 @@ int main(int argc,char **argv){
 
 	pcliente listaPessoas = NULL;
 	Cliente pessoa;
-	
+
+	// thread para a duracao do campeonato
+	pthread_t threadDuracao;
+    pthread_create(&threadDuracao, NULL, CampeonatoTime,(void *) NULL);
+	// thread para o tempo de espera que ele tem pelos jogadores
+	pthread_t threadEspera;
+	pthread_create(&threadEspera,NULL,esperaJogadores,(void *)NULL);
+
+
 	if(access(FIFO_SERV,F_OK)!=0){
 		mkfifo(FIFO_SERV,0600);
 	}
@@ -389,7 +401,6 @@ int main(int argc,char **argv){
 	printf("Fifo foi aberto!\n\n");
 	printf("Consola do arbitro\n");
 	setbuf(stdout,NULL);  
-
 	do{
 		
 		// (1X) ABRE O PIPE, RECEBE A PESSOA, LE A PESSOA, ADICIONA A LISTA,ESCREVE PARA O PIPE DO CLIENTE O JOGO, FECHA O PIPE DO E DO SERVIDOR CLIENTE
@@ -425,13 +436,18 @@ int main(int argc,char **argv){
 		
 	else if(res > 0 && FD_ISSET(fd,&fds)){ // fd corresponde ao pipe
 		// PARTE DE LER DO CLIENTE abrir o fifo do cliente para ler o que ele enviou
+		
 		num = read(fd,&pessoa,sizeof(Cliente)); // ler do pipe do servidor o que o cliente escreveu para la;
 		if(num == -1){
 			printf("\nErro ao ler dados do cliente");
 			exit(EXIT_FAILURE);
 		}
-		// TA COM BUG, SEMPRE QUE DA READ DE ALGUMA CENA ACRESCENTA NOVO USER.....
-		listaPessoas = adicionaLista(listaPessoas,pessoa,&numJogadores);
+		
+		// printf("Novo jogador: %s\n",pessoa.nome);
+		if(verificaNome(listaPessoas,pessoa))
+			listaPessoas = adicionaLista(listaPessoas,pessoa,&numJogadores);
+		else
+			kill(pessoa.pid,SIGINT);
 
 		fflush(stdout);
 		pessoa.jogo = 5;
@@ -443,6 +459,7 @@ int main(int argc,char **argv){
 		}
 		if(strcmp(pessoa.comando,"#quit") == 0){
 			printf("Jogador %s saiu do jogo!",pessoa.nome);
+			listaPessoas = kickJogador(pessoa.nome,listaPessoas,&numJogadores);
 		}
 
 		// PARTE DE ENVIAR PARA O CLIENTE abrir o fifo do cliente para escrever a resposta para la para dentro.
@@ -453,14 +470,17 @@ int main(int argc,char **argv){
 			exit(EXIT_FAILURE);
 		}
 		
+		
 		num = write(fdescrita,&pessoa,sizeof(Cliente));
 		if(num == -1){
 			printf("\nErro ao enviar dados para o cliente\n");
 			exit(EXIT_FAILURE);
 		}
+
 		close(fdescrita);
 	}
-	
+
+
 	}while(strcmp(comando,"exit") != 0);
 
 	close(fd);
