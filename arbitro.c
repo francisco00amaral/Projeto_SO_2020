@@ -25,7 +25,8 @@
 //#include "arbitro.h"
 #define MAXP 5
 pcliente listaPessoas = NULL;
-int espera = 0;
+int duracao = 0; // serve como booleana, a 0 se ainda nao acabou a duracao do campeonato, a 1 se ja
+int espera = 0; // serve como booleana, a 0 se ainda nao acabou a espera de jogadores, a 1 se ja
 int numJogadores = 0;
 int mp=0;
 int duracaoCampeonato,tempoEspera;
@@ -115,13 +116,14 @@ void *CampeonatoTime(void *dados){
 	// }
 	sleep(duracaoCampeonato);
 	printf("THREAD ACORDOU");
-	espera = 1;
+	duracao = 1;
 	pthread_exit(NULL);  /* termina thread */
 }
 
 
 void *esperaJogadores(void *dados){
 	sleep(tempoEspera);
+	espera = 1;
 	pthread_exit(NULL);
 }
 ///////////////////////////////////////////////////////////////////7
@@ -333,6 +335,17 @@ while(aux != NULL)
    return lista;
 } 
 
+void libertaLista(pcliente p){
+
+        pcliente aux;
+
+        while(p != NULL){
+            aux = p;
+            p = p->prox;
+            free(aux);
+        }
+}
+
 void trataTeclado(char* comando){
 	int i;
 	if(strcmp(comando,"players") == 0){
@@ -350,10 +363,13 @@ void trataTeclado(char* comando){
 	}
 	if(strcmp(comando,"exit") == 0){
 		//fechar pipes, limpar memoria
+		libertaLista(listaPessoas);
 		unlink(FIFO_SERV);
 		exit(EXIT_SUCCESS);
 		}
 }
+
+
 
 int main(int argc,char **argv){
 	
@@ -500,6 +516,8 @@ int main(int argc,char **argv){
 
 
 	}while(strcmp(comando,"exit") != 0);
+
+	libertaLista(listaPessoas);
 
 	close(fd);
 
