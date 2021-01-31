@@ -28,12 +28,14 @@ pcliente listaPessoas = NULL;
 int duracao = 0; // serve como booleana, a 0 se ainda nao acabou a duracao do campeonato, a 1 se ja
 int espera = 0; // serve como booleana, a 0 se ainda nao acabou a espera de jogadores, a 1 se ja
 int numJogadores = 0;
+char fifoThread[40];
 int mp=0;
 int duracaoCampeonato,tempoEspera;
 int fd; // pipe do servidor
 int fdescrita; // pipe do cliente
 pthread_t threadEspera;
 pthread_t threadDuracao;
+
 
 
 
@@ -123,7 +125,24 @@ void *CampeonatoTime(void *dados){
 
 void *esperaJogadores(void *dados){
 	sleep(tempoEspera);
+	printf("THREAD DE ESPERAR JOGADORES ACORDOU"); 
 	espera = 1;
+	pthread_exit(NULL);
+}
+
+// esta thread vai receber uma estrutura com clientes?
+void *trataCliente(void* dados){
+	Cliente *pdata;
+
+	pdata = (Cliente *) dados;
+
+	// thread do cliente, vai criar um named pipe, apartir daqui o cliente so comunica com este fifo...
+	//cli.pid=getpid();
+	sprintf(fifoThread,FIFO_ARB,pdata->pid);
+
+	mkfifo(fifoThread,0600);
+	printf("Fifo para comunicar com o cliente criado\n");
+
 	pthread_exit(NULL);
 }
 ///////////////////////////////////////////////////////////////////7
@@ -209,12 +228,28 @@ pcliente adicionaLista(pcliente lista,Cliente pessoa,int *npessoas){
         aux->prox = novo;
     }
 
+	printf("Novo jogador: %s\n",pessoa.nome);
 	(*npessoas)++;
 
 	
 	return lista;
 }
 
+int verificaExistencia(pcliente lista,Cliente pessoa){
+	pcliente aux;
+	aux = lista;
+		if(aux == NULL){
+			return 1;
+	}
+	while (aux != NULL)
+	{
+		if(aux->pid == pessoa.pid){
+			return 1;
+		}
+		aux = aux->prox;
+	}
+	return 0;
+}
 
 // falta isto
 // falta isto
@@ -419,6 +454,7 @@ int main(int argc,char **argv){
 	// thread para o tempo de espera que ele tem pelos jogadores
 	pthread_create(&threadEspera,NULL,esperaJogadores,(void *)NULL);
 
+	// array de threads que vai receber o jogador e enviar/lhe o jogo respetivo
 
 	if(access(FIFO_SERV,F_OK)!=0){
 		mkfifo(FIFO_SERV,0600);
@@ -433,6 +469,11 @@ int main(int argc,char **argv){
 	int res;
 	char fifo[40],comando[40];
 	fd_set fds;
+	pthread_t threadTarefa[5];
+	for(int j=0;i<numJogadores;i++){
+		pthread_create(threadTarefa[j],NULL,trataCliente,NULL);
+	}
+	   
 
 	fd = open(FIFO_SERV,O_RDWR); // em RDWR para ele nao bloquear quando nao tem jogadores a espera;
 	if(fd ==-1){
@@ -463,11 +504,11 @@ int main(int argc,char **argv){
 	
 	 else if(res > 0 && FD_ISSET(fd,&fds)){ // fd corresponde ao pipe
 		// PARTE DE LER DO CLIENTE abrir o fifo do cliente para ler o que ele enviou
-		if(espera == 1){
-			printf("Campeonato terminou!");
-			strcpy(comando,"exit");
-			printf("abc");
-		}
+		// if(espera == 1){
+		// 	printf("Campeonato terminou!");
+		// 	strcpy(comando,"exit");
+		// 	printf("abc");
+		// }
 		// pthread_join(threadDuracao,NULL);
 
 		num = read(fd,&pessoa,sizeof(Cliente)); // ler do pipe do servidor o que o cliente escreveu para la;
@@ -475,16 +516,23 @@ int main(int argc,char **argv){
 			printf("\nErro ao ler dados do cliente");
 			exit(EXIT_FAILURE);
 		}
+		if(verificaExistencia(listaPessoas,pessoa) == 0 && espera == 1){
+			kill(pessoa.pid,SIGUSR1);
+		}
+		// printf("Jogador %s a comunicar com o arbitro!\n",pessoa.nome);
 		
-		// printf("Novo jogador: %s\n",pessoa.nome);
-		if(verificaNome(listaPessoas,pessoa))
-			listaPessoas = adicionaLista(listaPessoas,pessoa,&numJogadores);
-		else
-			kill(pessoa.pid,SIGINT);
+		if(espera == 0){
+			if(verificaNome(listaPessoas,pessoa)){	
+				listaPessoas = adicionaLista(listaPessoas,pessoa,&numJogadores);
+			}
+			else
+				kill(pessoa.pid,SIGUSR1);
+		}
+
 
 		fflush(stdout);
 		pessoa.jogo = 5;
-		printf("Jogador %s a comunicar com o arbitro!\n",pessoa.nome);
+
 		// PARTE DE LOGICA
 
 		if(strcmp(pessoa.comando,"#mygame") == 0){
@@ -512,11 +560,12 @@ int main(int argc,char **argv){
 		
 
 		close(fdescrita);
-	}
+ }
 
 
-	}while(strcmp(comando,"exit") != 0);
+}while(strcmp(comando,"exit") != 0);
 
+	printf("Campeonato a terminar!");
 	libertaLista(listaPessoas);
 
 	close(fd);

@@ -16,6 +16,7 @@
 
 #define FIFO_SERV "fifo_serv"
 #define FIFO_CLI "cli%d"
+#define FIFO_ARB "a%d"
 
 typedef struct lista plista;
 typedef struct Request pedido;

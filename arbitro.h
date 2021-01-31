@@ -1,9 +1,9 @@
-#include "utils.h"
+// #include "utils.h"
 
-typedef struct {
-	int max;
-	// jogo jogos[10];
-	cliente clientes[10];
-	int duracao;
+// typedef struct {
+// 	int max;
+// 	// jogo jogos[10];
+// 	cliente clientes[10];
+// 	int duracao;
 
-}arbitro;
+// }arbitro;

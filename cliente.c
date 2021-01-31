@@ -2,7 +2,9 @@
 	char fifo[40];
 
 void trataSig(int i){
-	printf("nFui kickado do programa\n");
+	printf("Deixei de comunicar com o arbitro por motivos superiores.\n");
+	printf("Ou inscricoes ja terminaram, ou o arbitro nao gosta de mim, ou decidi sair.\n");
+
 	// close(fd); 
 	// unlink(fd); 
 	sleep(1);
