@@ -29,6 +29,11 @@ int duracao = 0; // serve como booleana, a 0 se ainda nao acabou a duracao do ca
 int espera = 0; // serve como booleana, a 0 se ainda nao acabou a espera de jogadores, a 1 se ja
 int numJogadores = 0;
 char fifoThread[40];
+int num;
+int verificado = 0;
+int inscrito = 0;
+int res;
+char fifo[40],comando[40];
 int mp=0;
 int duracaoCampeonato,tempoEspera;
 int fd; // pipe do servidor
@@ -125,8 +130,14 @@ void *CampeonatoTime(void *dados){
 
 void *esperaJogadores(void *dados){
 	sleep(tempoEspera);
-	printf("THREAD DE ESPERAR JOGADORES ACORDOU"); 
+	printf("THREAD DE ESPERAR JOGADORES ACORDOU");
+	printf(" ANTES %d",espera);
 	espera = 1;
+	printf("DEPOIS %d",espera);
+	Cliente b;
+	b.pid = 0;
+	strcpy(b.nome,"valor");
+	write(fd,&b,sizeof(Cliente));
 	pthread_exit(NULL);
 }
 
@@ -160,7 +171,6 @@ int verificaNome(pcliente lista,Cliente pessoa){
 		// 	return 1;
 		// }
 	 	if(strcmp(aux->nome,pessoa.nome) == 0 && aux->pid != pessoa.pid){
-			printf("Já existe um jogador com esse nome, não irá jogar!");
 			return 0;
 		}
 		aux = aux->prox;
@@ -292,21 +302,38 @@ int descobreJogo(pcliente lista,char *nome){
 	return 0;
 }
 
-// void avisaInicio(pcliente lista){
-// 		pcliente aux;
-// 		aux = lista;
+void avisaInicio(){
+		pcliente aux;
+		aux = listaPessoas;
 
-// 		if(aux == NULL){
-// 			printf("Nao ha jogadores ativos!\n");
-// 			return;
-// 		}
-// 		while (aux != NULL)
-// 		{
-// 			kill(aux->pid,SIGUSR2);
-// 		aux = aux->prox;
-// 		}
+		if(aux == NULL){
+			printf("Nao ha jogadores ativos!\n");
+			return;
+		}
+		while (aux != NULL)
+		{
+			sprintf(fifo,FIFO_CLI,aux->pid);
+			fdescrita = open(fifo,O_WRONLY); 
+			if(fdescrita == -1){
+			perror("\nErro ao abrir o FIFO do client.(Para escrita)");
+			exit(EXIT_FAILURE);
+		}
+		
+		inscrito = 1;
+		num = write(fdescrita,&inscrito,sizeof(inscrito));
+		printf("\n\tEnviei o %d inscrito\n",inscrito);
+		if(num == -1){
+			printf("\nErro ao enviar dados para o cliente\n");
+			exit(EXIT_FAILURE);
+		}
 
-// }
+		inscrito = 0;
+		close(fdescrita);
+
+		aux = aux->prox;
+		}
+
+}
 
 void avisaClientes(pcliente lista){
 		pcliente aux;
@@ -500,10 +527,7 @@ int main(int argc,char **argv){
 	}
 
 
-	int num;
-	int verificado = 0;
-	int res;
-	char fifo[40],comando[40];
+
 	fd_set fds;
 
 
@@ -513,9 +537,58 @@ int main(int argc,char **argv){
 			exit(EXIT_FAILURE);
 	}
 
+	
+
 	printf("Servidor foi aberto em modo nao bloqueante!\n\n");
 	printf("Consola do arbitro\n");
-	setbuf(stdout,NULL);  
+	setbuf(stdout,NULL);
+
+	// aceita jogadores enquanto o tempo de espera ainda nao acabar(espera == 0) ou nao houverem pelo menos dois jogadores.
+	while (espera == 0 || numJogadores < 2)
+	{
+		num = read(fd,&pessoa,sizeof(Cliente)); // ler do pipe do servidor o que o cliente escreveu para la;
+		if(pessoa.pid == 0)
+			break;
+		if(num == -1){
+			printf("\nErro ao ler dados do cliente");
+			exit(EXIT_FAILURE);
+		}
+
+		// verifica se o nome ja existe, devolve 0 se ja existir.;
+		if(verificaNome(listaPessoas,pessoa) == 0){
+			pessoa.jaExiste = 0;
+        	// kill(pessoa.pid,SIGUSR1);
+			verificado = 1;
+		}else{
+			//se ainda nao existir, coloco a variavel a 1. e adiciono este cliente a lista ligada.
+			pessoa.jaExiste = 1;
+			listaPessoas = adicionaLista(listaPessoas,pessoa,&numJogadores);
+			printf("Numero: %d",numJogadores);
+		}
+
+		sprintf(fifo,FIFO_CLI,pessoa.pid);
+		fdescrita = open(fifo,O_WRONLY); 
+
+		if(fdescrita == -1){
+			perror("\nErro ao abrir o FIFO do client.(Para escrita)");
+			exit(EXIT_FAILURE);
+		}
+		
+		
+		num = write(fdescrita,&pessoa,sizeof(Cliente));
+		if(num == -1){
+			printf("\nErro ao enviar dados para o cliente\n");
+			exit(EXIT_FAILURE);
+		}
+
+
+		close(fdescrita);
+	}
+
+	// enviar mensagem a todos os clientes que o torneio vai comecar...
+	// sprintf(fifo,FIFO_CLI,pessoa.pid);
+	avisaInicio();
+
 	do{
 		
 		// (1X) ABRE O PIPE, RECEBE A PESSOA, LE A PESSOA, ADICIONA A LISTA,ESCREVE PARA O PIPE DO CLIENTE O JOGO, FECHA O PIPE DO E DO SERVIDOR CLIENTE
@@ -578,7 +651,7 @@ int main(int argc,char **argv){
 		//    }
 		pessoa.emJogo = 1;
 
-		// int total = numJogadores;  
+		int total = numJogadores;  
 		// pthread_t threadTarefa[total];
 
 		//  for(int j=0;i<numJogadores;i++){
