@@ -484,10 +484,11 @@ int main(int argc,char **argv){
 
 	Cliente pessoa;
 
-	// thread para a duracao do campeonato
-    pthread_create(&threadDuracao, NULL, CampeonatoTime,(void *) NULL);
+	
 	// thread para o tempo de espera que ele tem pelos jogadores
-	pthread_create(&threadEspera,NULL,esperaJogadores,(void *)NULL);
+	if(pthread_create(&threadEspera,NULL,esperaJogadores,(void *)NULL) != 0){
+		perror("Erro a criar thread\n");
+	}
 
 	if(access(FIFO_SERV,F_OK)!=0){
 		mkfifo(FIFO_SERV,0600);
@@ -567,7 +568,14 @@ int main(int argc,char **argv){
 		fflush(stdout);
 		pessoa.jogo = 5;
 		if(espera == 1){ // espera ja acabou, vai comecar o campeonato, avisar clientes e comecar threads!
-           pessoa.emJogo = 1;
+        //    // thread para a duracao do campeonato,comeca a contar o tempo de campeonato. aqui ta mal posta, n devia ser aqui
+    	//    if(pthread_create(&threadDuracao, NULL, CampeonatoTime,(void *) NULL) != 0){
+		//    		perror("Erro a criar thread\n");
+		// 		close(fd);
+		// 		avisaClientes(listaPessoas);
+		// 		exit(EXIT_FAILURE);
+		//    }
+		pessoa.emJogo = 1;
 
 		// int total = numJogadores;  
 		// pthread_t threadTarefa[total];
