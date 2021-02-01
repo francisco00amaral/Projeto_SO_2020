@@ -16,6 +16,7 @@ void trataSig(int i){
 int main(int argc,char **argv){
 	Cliente cli;
 	int fd,num;
+	int i = 0;
 	int fdleitura;
 
 	if(access(FIFO_SERV,F_OK)!=0){
@@ -62,7 +63,13 @@ int main(int argc,char **argv){
 		num = read(fdleitura,&cli,sizeof(Cliente));
 		close(fdleitura);
 		if(strcmp(cli.comando,"#mygame") == 0){
-			printf("O meu jogo e o %d",cli.curioso);
+			printf("O meu jogo e o %d\n",cli.curioso);
+		}
+		if(cli.jaExiste)
+			printf("Ja existe um jogador com esse nome! Nao ira jogar!\n");
+		if(cli.emJogo == 1 && i == 0){
+			printf("O campeonato vai comecar, prepare-se!\n");
+			i = 1;
 		}
 
 	}while(strcmp(cli.comando,"#quit") != 0);

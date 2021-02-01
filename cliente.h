@@ -14,6 +14,8 @@ struct cliente{
 	int curioso;
 	int quit; // 1 sai 0 continua
 	int ativo;
+    int emJogo;
+	int jaExiste;
 	pcliente prox;
 };
 
