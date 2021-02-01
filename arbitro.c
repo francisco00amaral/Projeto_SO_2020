@@ -291,6 +291,22 @@ int descobreJogo(pcliente lista,char *nome){
 	return 0;
 }
 
+// void avisaInicio(pcliente lista){
+// 		pcliente aux;
+// 		aux = lista;
+
+// 		if(aux == NULL){
+// 			printf("Nao ha jogadores ativos!\n");
+// 			return;
+// 		}
+// 		while (aux != NULL)
+// 		{
+// 			kill(aux->pid,SIGUSR2);
+// 		aux = aux->prox;
+// 		}
+
+// }
+
 void avisaClientes(pcliente lista){
 		pcliente aux;
 		aux = lista;
@@ -532,6 +548,7 @@ int main(int argc,char **argv){
 		}
 		// verifica se ja existe uma pessoa com este nome. talvez abre o pipe do cliente e escreve la?
 		if(verificaNome(listaPessoas,pessoa) == 0){
+			pessoa.jaExiste = 1;
         	kill(pessoa.pid,SIGUSR1);
 			verificado = 1;
 		}
@@ -550,7 +567,6 @@ int main(int argc,char **argv){
 		fflush(stdout);
 		pessoa.jogo = 5;
 		if(espera == 1){ // espera ja acabou, vai comecar o campeonato, avisar clientes e comecar threads!
-		   avisaClientes(listaPessoas);
            pessoa.emJogo = 1;
 
 		// int total = numJogadores;  

@@ -1,10 +1,15 @@
 #include "utils.h"
 	char fifo[40];
+	Cliente cli;
+	int comeca = 0;
 
 void trataSig(int i){
-	printf("Deixei de comunicar com o arbitro por motivos superiores.\n");
-	printf("Ou inscricoes ja terminaram, ou o arbitro nao gosta de mim ou saiu, ou decidi sair.\n");
-
+	if(cli.jaExiste == 1)
+		printf("Nome ja existente no jogo, nao ira jogar!\n");
+	else{
+		printf("Deixei de comunicar com o arbitro por motivos superiores.\n");
+		printf("Ou inscricoes ja terminaram, ou o arbitro nao gosta de mim ou saiu, ou decidi sair.\n");
+		}
 	// close(fd); 
 	// unlink(fd); 
 	sleep(1);
@@ -14,7 +19,7 @@ void trataSig(int i){
 
 
 int main(int argc,char **argv){
-	Cliente cli;
+	
 	int fd,num;
 	int i = 0;
 	int fdleitura;
@@ -47,6 +52,7 @@ int main(int argc,char **argv){
 	cli.ativo = -1;
 	cli.jogo = 3; // mudar isto depois;
 	cli.prox = NULL;
+	cli.jaExiste = 0;
 
 	do{
 		printf("Comando: ");
@@ -68,7 +74,7 @@ int main(int argc,char **argv){
 		}
 		if(cli.jaExiste)
 			printf("Ja existe um jogador com esse nome! Nao ira jogar!\n");
-			
+
 		// if(cli.emJogo == 1 && i == 0){
 		// 	printf("O campeonato vai comecar, prepare-se!\n");
 		// 	i = 1;
