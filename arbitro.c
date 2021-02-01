@@ -291,6 +291,22 @@ int descobreJogo(pcliente lista,char *nome){
 	return 0;
 }
 
+void avisaClientes(pcliente lista){
+		pcliente aux;
+		aux = lista;
+
+		if(aux == NULL){
+			printf("Decidi sair sem haver jogadores ativos!\n");
+			return;
+		}
+		while (aux != NULL)
+		{
+			kill(aux->pid,SIGUSR1);
+		aux = aux->prox;
+		}
+
+}
+
 void mostraJogadores(pcliente jogador){
 	pcliente aux;
 	aux = jogador;
@@ -365,6 +381,7 @@ while(aux != NULL)
     }
 	}
 	//printf("\npid",save);
+	printf("Jogador %s kickado com sucesso!",nome);
 	kill(save,SIGUSR1);
     
 	(*numJogadores)--;
@@ -398,7 +415,8 @@ void trataTeclado(char* comando){
 	 listaPessoas = kickJogador(comando,listaPessoas,&numJogadores);
 	}
 	if(strcmp(comando,"exit") == 0){
-		//fechar pipes, limpar memoria
+		//fechar pipes, limpar memoria e manda sinal aos clientes que o arbitro acabou
+		avisaClientes(listaPessoas);
 		libertaLista(listaPessoas);
 		unlink(FIFO_SERV);
 		exit(EXIT_SUCCESS);
@@ -455,8 +473,6 @@ int main(int argc,char **argv){
 	// thread para o tempo de espera que ele tem pelos jogadores
 	pthread_create(&threadEspera,NULL,esperaJogadores,(void *)NULL);
 
-	// array de threads que vai receber o jogador e enviar/lhe o jogo respetivo
-
 	if(access(FIFO_SERV,F_OK)!=0){
 		mkfifo(FIFO_SERV,0600);
 	}
@@ -472,8 +488,6 @@ int main(int argc,char **argv){
 	char fifo[40],comando[40];
 	fd_set fds;
 
-
-	   
 
 	fd = open(FIFO_SERV,O_RDWR); // em RDWR para ele nao bloquear quando nao tem jogadores a espera;
 	if(fd ==-1){
@@ -516,28 +530,10 @@ int main(int argc,char **argv){
 			printf("\nErro ao ler dados do cliente");
 			exit(EXIT_FAILURE);
 		}
-		sprintf(fifo,FIFO_CLI,pessoa.pid);
 		// verifica se ja existe uma pessoa com este nome. talvez abre o pipe do cliente e escreve la?
 		if(verificaNome(listaPessoas,pessoa) == 0){
-		
-		// fdescrita = open(fifo,O_WRONLY); 
-
-		// if(fdescrita == -1){
-		// 	perror("\nErro ao abrir o FIFO do client.(Para escrita)");
-		// 	exit(EXIT_FAILURE);
-		// }
-		
-		// pessoa.jaExiste = 1;
-		// num = write(fdescrita,&pessoa,sizeof(Cliente));
-		// 	if(num == -1){
-		// 		printf("\nErro ao enviar dados para o cliente\n");
-		// 		exit(EXIT_FAILURE);
-		// }
-
-		// close(fdescrita);
-
-        kill(pessoa.pid,SIGUSR1);
-		verificado = 1;
+        	kill(pessoa.pid,SIGUSR1);
+			verificado = 1;
 		}
 
 		if(verificaExistencia(listaPessoas,pessoa) == 0 && espera == 1){ // se jogador nao existe e se ja acabou o tempo de espera
@@ -547,21 +543,22 @@ int main(int argc,char **argv){
 		
 		if(espera == 0 && verificado == 0){
 				listaPessoas = adicionaLista(listaPessoas,pessoa,&numJogadores);
-				verificado = 1;
+				verificado = 0;
 		}
 
 
 		fflush(stdout);
 		pessoa.jogo = 5;
 		if(espera == 1){ // espera ja acabou, vai comecar o campeonato, avisar clientes e comecar threads!
+		   avisaClientes(listaPessoas);
            pessoa.emJogo = 1;
 
-		int total = numJogadores;  
-		pthread_t threadTarefa[total];
+		// int total = numJogadores;  
+		// pthread_t threadTarefa[total];
 
-		 for(int j=0;i<numJogadores;i++){
-			pthread_create(threadTarefa[j],NULL,trataCliente,NULL);
-			}
+		//  for(int j=0;i<numJogadores;i++){
+		// 	pthread_create(threadTarefa[j],NULL,trataCliente,NULL);
+		// 	}
 		}
 
 		// PARTE DE LOGICA
@@ -575,6 +572,7 @@ int main(int argc,char **argv){
 		}
          
 		// PARTE DE ENVIAR PARA O CLIENTE abrir o fifo do cliente para escrever a resposta para la para dentro.
+		sprintf(fifo,FIFO_CLI,pessoa.pid);
 		fdescrita = open(fifo,O_WRONLY); 
 		if(fdescrita == -1){
 			perror("\nErro ao abrir o FIFO do client.(Para escrita)");

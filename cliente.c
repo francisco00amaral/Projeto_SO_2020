@@ -3,7 +3,7 @@
 
 void trataSig(int i){
 	printf("Deixei de comunicar com o arbitro por motivos superiores.\n");
-	printf("Ou inscricoes ja terminaram, ou o arbitro nao gosta de mim, ou decidi sair.\n");
+	printf("Ou inscricoes ja terminaram, ou o arbitro nao gosta de mim ou saiu, ou decidi sair.\n");
 
 	// close(fd); 
 	// unlink(fd); 
@@ -24,6 +24,7 @@ int main(int argc,char **argv){
 		exit(5);
 	}
 	signal(SIGUSR1,trataSig);
+
 	cli.pid=getpid();
 	sprintf(fifo,FIFO_CLI,cli.pid);
 
@@ -67,10 +68,11 @@ int main(int argc,char **argv){
 		}
 		if(cli.jaExiste)
 			printf("Ja existe um jogador com esse nome! Nao ira jogar!\n");
-		if(cli.emJogo == 1 && i == 0){
-			printf("O campeonato vai comecar, prepare-se!\n");
-			i = 1;
-		}
+			
+		// if(cli.emJogo == 1 && i == 0){
+		// 	printf("O campeonato vai comecar, prepare-se!\n");
+		// 	i = 1;
+		// }
 
 	}while(strcmp(cli.comando,"#quit") != 0);
 	
@@ -78,10 +80,6 @@ int main(int argc,char **argv){
 
 // fazer o write do nome e receber o jogo, e depois ter um do while que fica a correr enquanto nao receber um exit ou pedir exit ao arbitro
 	
-
-// COMANDOS
-
-	// abrir o pipe outra vez , escrever para la uma estrutura do tipo
 
 	close(fd);
 
