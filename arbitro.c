@@ -23,7 +23,7 @@
 //
 //##########################################################################################################
 //#include "arbitro.h"
-#define MAXP 5
+#define MAXP 2
 pcliente listaPessoas = NULL;
 int duracao = 0; // serve como booleana, a 0 se ainda nao acabou a duracao do campeonato, a 1 se ja
 int espera = 0; // serve como booleana, a 0 se ainda nao acabou a espera de jogadores, a 1 se ja
@@ -202,6 +202,7 @@ pcliente adicionaLista(pcliente lista,Cliente pessoa,int *npessoas){
         //aux->prox = novo;
 		if(*npessoas >= mp){
 			printf("Numero de jogadores chegou ao limite, %d",mp);
+			kill(pessoa.pid,SIGUSR1);
 			return lista;
 		}
 
@@ -213,7 +214,7 @@ pcliente adicionaLista(pcliente lista,Cliente pessoa,int *npessoas){
         	abort();
 		}
 
-		novo->ativo = pessoa.ativo;
+		novo->ativo = 1;
 		novo->jogo = pessoa.jogo;
 		strcpy(novo->nome,pessoa.nome); 
 		novo->pid = pessoa.pid;
@@ -464,7 +465,7 @@ int main(int argc,char **argv){
 		if(mp>30)
 			mp=30;
 		else if(mp==0)
-		return (EXIT_FAILURE);
+			return (EXIT_FAILURE);
 	}else{
 		mp=MAXP;//como nao conseguio obter a variavel de ambiente toma o valor de maxp por default
 		printf("\nMaximo de jogadores por omissao=%d",mp);
