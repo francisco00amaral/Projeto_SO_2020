@@ -18,10 +18,11 @@ int main(){
 	srand((unsigned) time(&t));
 	signal(SIGUSR1,recebeSIG);
 	printf("------- Bem vindo ao jogo da roleta! -------\n\n");
+	printf("Para jogar este jogo, simplesmente escolha um numero de 0 a 5\n");
+
 	while (pontuacao<3){
 
 	
-	printf("Para jogar este jogo, simplesmente escolha um numero de 0 a 5\n");
 	printf("Introduza o seu numero no intervalo dito em cima: ");
 	do{
 	scanf("%d",&numero);
