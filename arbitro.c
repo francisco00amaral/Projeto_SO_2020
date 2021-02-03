@@ -183,10 +183,10 @@ void *trataCliente(void *dados)
 		// 	// exit(7);
 		// }
 
-	printf("Estou a espera de receber algo do fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
+	// printf("Estou a espera de receber algo do fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
 
 	sprintf(fifoCliente, FIFO_CLI, pedido.pid);
-	printf("\n ANTESSS: Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
+	// printf("\n ANTESSS: Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
 
 	fdescrita = open(fifoCliente, O_WRONLY);
 	if (fdescrita == -1)
@@ -194,17 +194,17 @@ void *trataCliente(void *dados)
 		perror("\nErro ao abrir o FIFO do client.(Para escrita)");
 		exit(EXIT_FAILURE);
 	}
-	printf("%s ABCASDASDSASASD ",pedido.comando);
+	// printf("%s ABCASDASDSASASD ",pedido.comando);
 	num = write(fdescrita, &pedido, sizeof(Jogador));
 	if (num == -1)
 	{
 		printf("\nErro ao enviar dados para o cliente\n");
 		exit(EXIT_FAILURE);
 	}
-	printf("\n DEPOISSS Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
+	// printf("\n DEPOISSS Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
 
 	num = read(fd, &pedido, sizeof(Jogador)); // ler do pipe do servidor o que o cliente escreveu para la;
-	printf("Recebi o %s com o pid de:%d\n e com o comando %s ", pedido.nome,pedido.pid,pedido.comando);
+	// printf("Recebi o %s com o pid de:%d\n e com o comando %s ", pedido.nome,pedido.pid,pedido.comando);
 	fflush(stdout);
 
 	//  o problema esta no read

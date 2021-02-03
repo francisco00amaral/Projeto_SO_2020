@@ -124,18 +124,18 @@ int main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 
-		printf("Abri o fifo do servidor para ler leitura %s\n", user.nome);
+		// printf("Abri o fifo do servidor para ler leitura %s\n", user.nome);
 
 		num = read(fdleitura,&user,sizeof(Jogador));
 		printf("%s : Recebi do servidor algo...\n", user.nome);
-		
+
 		if(strcmp(user.comando,"#mygame") == 0){
 			printf("O meu jogo e o %d\n",user.curioso);
 		}
 		strcpy(user.comando,teste);
 		num = write(fd,&user,sizeof(Jogador)); // escrever no pipe do servidor
 
-		printf("%s : Enviei ao servidor algo...\n",user.nome);
+		// printf("%s : Enviei ao servidor algo...\n",user.nome);
 
 		if(num == -1){
 			printf("\nErro ao enviar dados do servidor");
