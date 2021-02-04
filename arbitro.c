@@ -141,90 +141,120 @@ void *esperaJogadores(void *dados)
 // esta thread vai receber uma estrutura com clientes?
 void *trataCliente(void *dados)
 {
-	Jogador *pdata;
+	Jogador *pdata = (Jogador *)dados;
 
-	pdata = (Jogador *)dados;
 	Jogador pedido;
-	strcpy(pedido.nome,pdata->nome);
+	strcpy(pedido.nome, pdata->nome);
 	pedido.pid = pdata->pid;
-	strcpy(pedido.comando,pdata->comando);
+	strcpy(pedido.comando, pdata->comando);
 	char fifoCliente[40];
 	sprintf(fifoCliente, FIFO_CLI, pdata->pid);
 
-	int canal_Escrita_Jogo[2];
-	int canal_Leitura_Jogo[2];
+	int canal_Jogo_Arbitro[2];
+	int canal_Arbitro_Jogo[2];
+
 	// thread do cliente, vai criar um named pipe, apartir daqui o cliente so comunica com este fifo...
-	printf("Thread para comunicar com o jogador %s, que tem o PID de: %d, fifo %s criado.\n",pedido.nome,pedido.pid,fifoCliente);
-	// char *jogo1 = "jogo";
+	printf("Thread para comunicar com o jogador %s, que tem o PID de: %d, fifo %s criado.\n", pedido.nome, pedido.pid, fifoCliente);
+	char *jogo1 = "g2";
 	// char *jogo2 = "nomeFIcheiro"
 	// random();
 	// swtich(
 	// 	case 1
 	// )
-
-	do{
-		// int res;
-		// pipe(canal_Escrita_Jogo);
-		// pipe(canal_Leitura_Jogo);
-		// res = fork();
-		// if (res == 0)
-		// {
-		// 	// pipe que escreve, fecho o stdout
-		// 	// pipe que le, fecho o stdin para nao receber os comandos normais do arbitro
-		// 	//enganar o jogo ,redirecionamento;
-		// 	/*close(canal[0]);
-		// 	close(1);
-		// 	dup(canal[1]);
-		// 	close(canal[1]);*/
-		// 	fflush(stdout);
-
-		// 	// execl(nome, nome, NULL);
-		// 	// printf("erroa executar jogo[%5d]");
-		// 	// exit(7);
-		// }
-
-	// printf("Estou a espera de receber algo do fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
-
-	sprintf(fifoCliente, FIFO_CLI, pedido.pid);
-	// printf("\n ANTESSS: Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
-
-	fdescrita = open(fifoCliente, O_WRONLY);
-	if (fdescrita == -1)
+	pipe(canal_Jogo_Arbitro);
+	pipe(canal_Arbitro_Jogo);
+	int res;
+	res = fork();
+	if (res == 0)
 	{
-		perror("\nErro ao abrir o FIFO do client.(Para escrita)");
-		exit(EXIT_FAILURE);
+		// pipe que escreve, fecho o stdout
+		printf("Sou o filho com o pid %d\n", getpid());
+		//enganar o jogo ,redirecionamento;
+		// sou o filho
+		// fechar o stdin do jogo, pois ele nao quer escrever do arbitro
+		close(canal_Arbitro_Jogo[1]);
+		close(canal_Jogo_Arbitro[0]);
+		// fflush(stdout);
+		close(1); // fechar o stdout porque nao quero dar print aqui.
+
+		// em vez de dar printn terminal,e u quero dar print p outro lado
+		// dup mete o descritor na posicao disponivel, neste caso vai ser no stdout.
+		// O arbitro vai receber este printf
+		// redirecionar para o cliente.
+		dup(canal_Jogo_Arbitro[1]);
+		close(canal_Jogo_Arbitro[1]);
+
+		// fechar o stdin, pois nao quero escrever para la, quem vai fazer isso e o cliente.
+		close(0);
+
+		dup(canal_Arbitro_Jogo[0]);
+		close(canal_Arbitro_Jogo[0]);
+
+		execl(jogo1, jogo1, NULL);
+		printf("erroa executar jogo");
+		exit(7);
 	}
-	// printf("%s ABCASDASDSASASD ",pedido.comando);
-	num = write(fdescrita, &pedido, sizeof(Jogador));
-	if (num == -1)
+
+	printf("Agora sou o pai \n");
+	close(canal_Jogo_Arbitro[1]);
+	close(canal_Arbitro_Jogo[0]);
+	char buffer[1000000];
+	// FALTA COMPOR ISTO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	do
 	{
-		printf("\nErro ao enviar dados para o cliente\n");
-		exit(EXIT_FAILURE);
-	}
-	// printf("\n DEPOISSS Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
+		// ler o jogo todo.
+		res = read(canal_Jogo_Arbitro[0], &buffer, sizeof(buffer));
+		// if(res = sizeof(buffer))
+		//         printf("recebi com sucesso a mensagem %s", buffer);
+		// strcpy(pedido.comando, buffer);
 
-	num = read(fd, &pedido, sizeof(Jogador)); // ler do pipe do servidor o que o cliente escreveu para la;
-	// printf("Recebi o %s com o pid de:%d\n e com o comando %s ", pedido.nome,pedido.pid,pedido.comando);
-	fflush(stdout);
+		// printf("Estou a espera de receber algo do fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
 
-	//  o problema esta no read
+		sprintf(fifoCliente, FIFO_CLI, pedido.pid);
+		// printf("\n ANTESSS: Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
 
-	if(strcmp(pedido.comando,"#mygame") == 0){
-		printf("O %s esqueceu-se do jogo...Ira ser enviada uma mensagem para o relembrar\n",pedido.nome);
-		pedido.curioso = 500;
-	}
+		fdescrita = open(fifoCliente, O_WRONLY);
+		if (fdescrita == -1)
+		{
+			perror("\nErro ao abrir o FIFO do client.(Para escrita)");
+			exit(EXIT_FAILURE);
+		}
+		// printf("%s ABCASDASDSASASD ",pedido.comando);
+		num = write(fdescrita, &pedido, sizeof(Jogador));
+		if (num == -1)
+		{
+			printf("\nErro ao enviar dados para o cliente\n");
+			exit(EXIT_FAILURE);
+		}
+		// printf("\n DEPOISSS Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
 
-	// printf("\n\tEnviei o %d inscrito\n",inscrito);
-	// printf("Enviei ao %s o jogo...\n",pedido.nome);
+		num = read(fd, &pedido, sizeof(Jogador)); // ler do pipe do servidor o que o cliente escreveu para la;
+		// printf("Recebi o %s com o pid de:%d\n e com o comando %s ", pedido.nome,pedido.pid,pedido.comando);
+		fflush(stdout);
 
-	close(fdescrita);
-	}while(strcmp(pedido.comando,"#quit") != 0);
+		//  o problema esta no read
 
+		if (strcmp(pedido.comando, "#mygame") == 0)
+		{
+			printf("O %s esqueceu-se do jogo...Ira ser enviada uma mensagem para o relembrar\n", pedido.nome);
+			pedido.curioso = 500;
+		}
+
+		// printf("\n\tEnviei o %d inscrito\n",inscrito);
+		// printf("Enviei ao %s o jogo...\n",pedido.nome);
+
+		close(fdescrita);
+	} while (strcmp(pedido.comando, "#quit") != 0);
+
+	pdata->ativo = -1;
+	kill(pedido.pid, SIGUSR1);
+	numJogadores--;
 	// mkfifo(fifoThread, 0600);
 	printf("Fifo para comunicar com o cliente criado\n");
 
 	pthread_exit(NULL);
 }
+
 ///////////////////////////////////////////////////////////////////7
 // devolve 0 se ja existir uma pessoa com este nome, 1 senao
 int verificaNomeEstatico(Jogador *jogadores, char *nome)
@@ -265,7 +295,6 @@ void adicionaCliente(Jogador *jogadores, Jogador user)
 	printf("Novo jogador: %s\n", user.nome);
 	numJogadores++;
 }
-
 
 // falta isto
 // falta isto
@@ -339,12 +368,13 @@ void avisaInicio(Jogador *jogadores)
 	}
 }
 
-void avisaClientesE(Jogador* jogadores){
+void avisaClientesE(Jogador *jogadores)
+{
 	int i;
 	for (i = 0; i < mp; i++)
 	{
-		if(jogadores[i].ativo == 1)
-			kill(jogadores[i].pid,SIGUSR1);
+		if (jogadores[i].ativo == 1)
+			kill(jogadores[i].pid, SIGUSR1);
 	}
 }
 
@@ -358,23 +388,22 @@ void mostraJogadoresE(Jogador *jogadores)
 	}
 }
 
-
 void kickJogadorE(Jogador *jogadores, char *nome)
 {
 	int i;
 	for (i = 0; i < mp; i++)
 	{
-		if (jogadores[i].ativo == 1 && strcmp(jogadores[i].nome, nome) == 0){
+		if (jogadores[i].ativo == 1 && strcmp(jogadores[i].nome, nome) == 0)
+		{
 			jogadores[i].ativo = -1;
 			printf("Jogador %s kickado com sucesso!", nome);
-			kill(jogadores[i].pid, SIGUSR1);	
+			kill(jogadores[i].pid, SIGUSR1);
 			numJogadores--;
 			return;
-		}	
+		}
 	}
 	printf("Jogador %s nao existe", nome);
 }
-
 
 void trataTeclado(char *comando, Jogador *jogadores)
 {
@@ -490,7 +519,7 @@ int main(int argc, char **argv)
 	setbuf(stdout, NULL);
 
 	// aceita jogadores enquanto o tempo de espera ainda nao acabar(espera == 0) ou nao houverem pelo menos dois jogadores.
-	while (espera == 0 || numJogadores < 1)
+	while (espera == 0 || numJogadores < 2)
 	{
 		num = read(fd, &user, sizeof(Jogador)); // ler do pipe do servidor o que o cliente escreveu para la;
 		if (user.pid == 0)
@@ -550,7 +579,8 @@ int main(int argc, char **argv)
 
 	for (int j = 0; j < numJogadores; j++)
 	{
-		if(jogadores[j].ativo == 1){
+		if (jogadores[j].ativo == 1)
+		{
 			if (pthread_create(&threadTarefa[j], NULL, trataCliente, (void *)&jogadores[j]) != 0)
 			{
 				perror("Erro a criar thread\n");
@@ -572,14 +602,15 @@ int main(int argc, char **argv)
 	printf("------Consola do arbitro------\n\n");
 	printf("Comando disponiveis: \nk[nomeJogador]\texit\tplayers\ts[nomeJogador\tr[nomeJogador]\tend \n");
 
-	do{
+	do
+	{
 		printf("Comando: ");
 		scanf("%s", comando);
-		
+
 		fflush(stdout);
 		trataTeclado(comando, jogadores);
 
-	}while(strcmp(comando,"exit") != 0);
+	} while (strcmp(comando, "exit") != 0);
 
 	printf("Campeonato a terminar!\n");
 

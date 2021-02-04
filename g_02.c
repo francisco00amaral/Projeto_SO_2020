@@ -10,6 +10,7 @@ void recebeSIG(int sig)
 }
 
 int main(){
+    setbuf(stdout,NULL);
 	int numero1=0;
     int numero2 = 0;
 	int resposta = 0;

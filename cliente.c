@@ -18,7 +18,7 @@ void trataSig(int i)
 
 int main(int argc, char **argv)
 {
-
+	setbuf(stdout,NULL);
 	int fd, num;
 	int inscrito = 0;
 	int i = 0;
@@ -72,6 +72,7 @@ int main(int argc, char **argv)
 	/* Receber resposta do servidor (read)*/
 	fdleitura = open(fifo, O_RDONLY);
 	num = read(fdleitura, &user, sizeof(Jogador));
+
 
 	if (num == -1)
 	{
@@ -127,7 +128,7 @@ int main(int argc, char **argv)
 		// printf("Abri o fifo do servidor para ler leitura %s\n", user.nome);
 
 		num = read(fdleitura,&user,sizeof(Jogador));
-		printf("%s : Recebi do servidor algo...\n", user.nome);
+		printf("%s : Recebi do servidor algo...\n", user.comando);
 
 		if(strcmp(user.comando,"#mygame") == 0){
 			printf("O meu jogo e o %d\n",user.curioso);

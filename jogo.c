@@ -12,6 +12,8 @@ void recebeSIG(int sig)
 
 
 int main(){
+	setbuf(stdout,NULL);
+	printf("AAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
 	int numero=0;
 	int c,pontuacao=0,tentativas=0;
 	time_t t;
