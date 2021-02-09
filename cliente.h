@@ -7,14 +7,15 @@ typedef struct cliente *pcliente;
 
 typedef struct{
 	char nome[20];
-	int jogo; //jogo vai ser 1 ou 2 ou 3;
+	char jogo[20]; //jogo vai ser 1 ou 2 ou 3;
 	int pid;
 	char comando[20];
 	int curioso;
 	int quit; // 1 sai 0 continua
-	int ativo;
+	int ativo; // se esta ativo
     int emJogo;
-	int jaExiste;
+	int pontuacao;
+	int jaExiste; // saber se nome ja existe
 }Jogador;
 
 struct cliente{

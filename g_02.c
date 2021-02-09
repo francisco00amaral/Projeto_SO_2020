@@ -19,7 +19,6 @@ int main(){
 	time_t t;
 	srand((unsigned) time(&t));
 	signal(SIGUSR1,recebeSIG);
-	printf("------- Bem vindo ao quiz matematico! -------\n\n");
 	printf("Para jogar este jogo, acerte na pergunta que ira ser atribuida.\n");
 
 	while (1){

@@ -33,7 +33,6 @@ char fifoThread[40];
 int num;
 int verificado = 0;
 int inscrito = 0;
-int res;
 char fifo[40], comando[40];
 int mp = 0;
 int duracaoCampeonato, tempoEspera;
@@ -42,11 +41,7 @@ int fdescrita; // pipe do cliente
 pthread_t threadEspera;
 pthread_t threadDuracao;
 
-void verificaAmbiente()
-{
-}
-
-//mandar os jogos para os clientes
+/*mandar os jogos para os clientes
 //provavelmente meter numa thread
 void funcaoFork(char *nome)
 {
@@ -75,7 +70,7 @@ void funcaoFork(char *nome)
 			/*close(canal[0]);
 			close(1);
 			dup(canal[1]);
-			close(canal[1]);*/
+			close(canal[1]);
 			fflush(stdout);
 
 			execl(nome, nome, NULL);
@@ -99,7 +94,7 @@ void funcaoFork(char *nome)
 			printf("\nArbitro jogador terminou com %d\n", WEXITSTATUS(estado));
 		}
 	}
-}
+} */
 
 void trataSig(int i)
 {
@@ -110,7 +105,6 @@ void trataSig(int i)
 }
 
 ////////////////////////-threads-/////////////////////////////////////
-//fazer duas threds(uma para cada variavel de ambiente)
 void *CampeonatoTime(void *dados)
 {
 	// for(int i = 0;i<10;i++){
@@ -134,27 +128,31 @@ void *esperaJogadores(void *dados)
 	b.pid = 0;
 	b.ativo = -1;
 	strcpy(b.nome, "valor");
-	write(fd, &b, sizeof(Jogador));
+	num = write(fd, &b, sizeof(Jogador));
 	pthread_exit(NULL);
 }
 
-// esta thread vai receber uma estrutura com clientes?
 void *trataCliente(void *dados)
 {
 	Jogador *pdata = (Jogador *)dados;
 
-	Jogador pedido;
-	strcpy(pedido.nome, pdata->nome);
-	pedido.pid = pdata->pid;
-	strcpy(pedido.comando, pdata->comando);
 	char fifoCliente[40];
+	char fifoAux[40];
+	int fdAux;
+	int fdCliente;
+	int le;
+	sprintf(fifoAux,FIFO_ARB,pdata->pid); // pipe auxiliar.
 	sprintf(fifoCliente, FIFO_CLI, pdata->pid);
+
+
+	mkfifo(fifoAux, 0600); // criar o fifo do auxiliar
+	//printf("Fifo do auxiliar criado\n");
 
 	int canal_Jogo_Arbitro[2];
 	int canal_Arbitro_Jogo[2];
 
 	// thread do cliente, vai criar um named pipe, apartir daqui o cliente so comunica com este fifo...
-	printf("Thread para comunicar com o jogador %s, que tem o PID de: %d, fifo %s criado.\n", pedido.nome, pedido.pid, fifoCliente);
+	printf("Thread para comunicar com o jogador %s, que tem o PID de: %d, fifo %s.\n", pdata->nome, pdata->pid, fifoCliente);
 	char *jogo1 = "g2";
 	// char *jogo2 = "nomeFIcheiro"
 	// random();
@@ -163,12 +161,12 @@ void *trataCliente(void *dados)
 	// )
 	pipe(canal_Jogo_Arbitro);
 	pipe(canal_Arbitro_Jogo);
-	int res;
-	res = fork();
-	if (res == 0)
+	int p;
+	p = fork();
+	if (p == 0)
 	{
 		// pipe que escreve, fecho o stdout
-		printf("Sou o filho com o pid %d\n", getpid());
+		// printf("Sou o filho com o pid %d\n", getpid());
 		//enganar o jogo ,redirecionamento;
 		// sou o filho
 		// fechar o stdin do jogo, pois ele nao quer escrever do arbitro
@@ -195,59 +193,95 @@ void *trataCliente(void *dados)
 		exit(7);
 	}
 
-	printf("Agora sou o pai \n");
+	
 	close(canal_Jogo_Arbitro[1]);
 	close(canal_Arbitro_Jogo[0]);
-	char buffer[1000000];
-	// FALTA COMPOR ISTO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	char buffer[4096];
+	char resposta[20];
+	char enter = '\n';
+	int res;
+	int estado;
 	do
 	{
-		// ler o jogo todo.
-		res = read(canal_Jogo_Arbitro[0], &buffer, sizeof(buffer));
-		// if(res = sizeof(buffer))
-		//         printf("recebi com sucesso a mensagem %s", buffer);
-		// strcpy(pedido.comando, buffer);
-
-		// printf("Estou a espera de receber algo do fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
-
-		sprintf(fifoCliente, FIFO_CLI, pedido.pid);
-		// printf("\n ANTESSS: Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
-
-		fdescrita = open(fifoCliente, O_WRONLY);
-		if (fdescrita == -1)
+		memset(buffer,'\0',sizeof(char) * 4096);
+		res = read(canal_Jogo_Arbitro[0],&buffer,sizeof(buffer));
+		if (res == -1)
 		{
-			perror("\nErro ao abrir o FIFO do client.(Para escrita)");
-			exit(EXIT_FAILURE);
+		printf("\nErro ao ler do pipe do jogo para o arbitro\n");
+		exit(EXIT_FAILURE);
 		}
-		// printf("%s ABCASDASDSASASD ",pedido.comando);
-		num = write(fdescrita, &pedido, sizeof(Jogador));
-		if (num == -1)
-		{
-			printf("\nErro ao enviar dados para o cliente\n");
-			exit(EXIT_FAILURE);
-		}
-		// printf("\n DEPOISSS Vou abrir o fifo %s do cliente %s para escrita \n",fifoCliente, pedido.nome);
+		printf("\n\t[SUCESSO]: Leitura do jogo bem efetuada\n");
 
-		num = read(fd, &pedido, sizeof(Jogador)); // ler do pipe do servidor o que o cliente escreveu para la;
-		// printf("Recebi o %s com o pid de:%d\n e com o comando %s ", pedido.nome,pedido.pid,pedido.comando);
+		// strcpy(buffer,"Ola jogador!");
+		printf("Recebi : %s",buffer);
 		fflush(stdout);
+		sprintf(fifoCliente, FIFO_CLI, pdata->pid);
 
-		//  o problema esta no read
-
-		if (strcmp(pedido.comando, "#mygame") == 0)
-		{
-			printf("O %s esqueceu-se do jogo...Ira ser enviada uma mensagem para o relembrar\n", pedido.nome);
-			pedido.curioso = 500;
-		}
-
-		// printf("\n\tEnviei o %d inscrito\n",inscrito);
-		// printf("Enviei ao %s o jogo...\n",pedido.nome);
-
+		fdescrita = open(fifoCliente,O_WRONLY);
+		printf("\n\t[SUCESSO]: %s aberto\n",fifoCliente);
+		
+		res = write(fdescrita,&buffer,sizeof(buffer));
 		close(fdescrita);
-	} while (strcmp(pedido.comando, "#quit") != 0);
+		if (res == -1)
+		{
+		printf("\nErro ao enviar dados para o cliente\n");
+		exit(EXIT_FAILURE);
+		}
+		printf("\n\t[SUCESSO]: Escrita para o %s bem efetuada \n",fifoCliente);
+		
+		printf("\n\t[FECHADO]: Pipe do %s fechado\n",fifoCliente);
 
+		printf("\n\t[A ABRIR]: Vou abrir o %s aberto\n",fifoAux);
+
+		fdAux = open(fifoAux,O_RDWR);
+
+		printf("\n\t[ABERTO]: Abrir o %s aberto\n",fifoAux);
+		memset(resposta,'\0',sizeof(char) * 20);
+		res = read(fdAux,&resposta,sizeof(resposta));
+		close(fdAux);
+		if (res == -1)
+		{
+		printf("\nErro ao ler dados do cliente\n");
+		exit(EXIT_FAILURE);
+		}
+		printf("\n\t[SUCESSO]: Leitura do %s bem efetuada \n",fifoAux);
+		
+		printf("\n\t[FECHADO]: Pipe do %s fechado\n",fifoAux);
+		printf("\n\t[RECEBIDO]: Recebi do cliente: %s\n",resposta);
+		strncat(resposta,&enter,1);
+
+
+		// if(strcmp(resposta,"#mygame") == 0){
+		// 	// abro o pipe mando/lhe o jogo
+		// 	char mygame[30];
+		// 	strcpy(mygame,jogo1);
+		// 	fdescrita = open(fifoCliente,O_WRONLY);
+		// 	res = write(fdescrita,&mygame,sizeof(mygame));
+		// 	close(fdescrita);
+		// }
+		
+		printf("\n\t[ENVIADO]: Enviei ao jogo %s \n",resposta);
+		res = write(canal_Arbitro_Jogo[1],&resposta,strlen(resposta));
+		if (res == -1)
+		{
+		printf("\nErro ao enviar dados para o jogo\n");
+		exit(EXIT_FAILURE);
+		}
+		printf("\n\t[SUCESSO]: Escrita para o jogo bem efetuada \n");
+		
+		
+	} while (strcmp(resposta,"#quit") != 0);
+
+	// enviar mensagem ao jogo para terminar
+	kill(p,SIGUSR1);
+	// obter a pontuacao
+	wait(&estado);
+	if (WIFEXITED(estado)){
+		pdata->pontuacao = estado;
+	}
+	unlink(fifoAux);
 	pdata->ativo = -1;
-	kill(pedido.pid, SIGUSR1);
+	kill(pdata->pid, SIGUSR1);
 	numJogadores--;
 	// mkfifo(fifoThread, 0600);
 	printf("Fifo para comunicar com o cliente criado\n");
@@ -305,7 +339,7 @@ void mostraJogos()
 {
 	struct dirent *de; // Pointer for directory entry
 
-	DIR *dr = opendir("/home/francisco/Desktop/SO_TP/SO_Projeto2020/jogos"); // compor depois,isto so funciona no meu pc por causa diretoria
+	DIR *dr = opendir("./jogos/"); // compor depois,isto so funciona no meu pc por causa diretoria
 
 	if (dr == NULL) // opendir returns NULL if couldn't open directory
 	{
@@ -355,6 +389,7 @@ void avisaInicio(Jogador *jogadores)
 
 			inscrito = 1;
 			num = write(fdescrita, &inscrito, sizeof(inscrito));
+			close(fdescrita);
 			// printf("\n\tEnviei o %d inscrito\n",inscrito);
 			if (num == -1)
 			{
@@ -363,7 +398,7 @@ void avisaInicio(Jogador *jogadores)
 			}
 
 			inscrito = 0;
-			close(fdescrita);
+			
 		}
 	}
 }
@@ -569,6 +604,7 @@ int main(int argc, char **argv)
 		close(fdescrita);
 	}
 
+	close(fd);
 	// enviar mensagem a todos os clientes que o torneio vai comecar...
 	// sprintf(fifo,FIFO_CLI,pessoa.pid);
 	avisaInicio(jogadores);
@@ -576,7 +612,6 @@ int main(int argc, char **argv)
 	// aqui seria comecar a fazer as threads para os jogos...
 	// toda a comunicacao cliente/servidor passa a ser feitos nesta thread.
 	pthread_t threadTarefa[numJogadores];
-
 	for (int j = 0; j < numJogadores; j++)
 	{
 		if (jogadores[j].ativo == 1)
@@ -620,33 +655,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-//############################################################
-//			completar a funçao dos jogos random
-//############################################################
-
-// menu vai ter o kick(ta feito),lista(ta feito);
-
-// MENU PARA TESTE
-/*	do{
-		printf("\n1-jogo acerta numero!");
-		printf("\n5-sair");
-		printf("\n>");
-		scanf("%d",&t);
-		switch(t){
-			case 1:
-			funcaoFork("jogo");
-			break;
-
-			case 2:
-					printf("\njogo2\n");
-
-					break;
-			case 3:
-					printf("\njogo3\n");
-					break;
-			case 5:
-				// ir a lista,limpar a memoria bla bla;
-				exit(EXIT_SUCCESS);
-		}
-	}while(i<=duracaoCampeonato || t!=5 ); */
