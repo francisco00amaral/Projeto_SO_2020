@@ -2,8 +2,12 @@
 char fifo[40];
 Cliente cli;
 Jogador user;
-int comeca = 0;
+int termina = 0;
 
+void sigCiclo(int i){
+	printf("O campeonato terminou!");
+	termina = 1;
+}
 void trataSig(int i)
 {
 	printf("Deixei de comunicar com o arbitro por motivos superiores.\n");
@@ -32,6 +36,7 @@ int main(int argc, char **argv)
 		exit(5);
 	}
 	signal(SIGUSR1, trataSig);
+	signal(SIGUSR2, sigCiclo);
 
 	user.pid = getpid();
 	user.ativo = -1;
@@ -118,7 +123,14 @@ int main(int argc, char **argv)
 	char buffer[4096];
 	sprintf(fifo, FIFO_CLI, user.pid);
 	sprintf(fifoAux,FIFO_ARB,getpid());
-	do{
+	do{	
+		
+		printf("\n[TERMINA ESTA A]: %d\n",termina);
+		sleep(0.8);
+		if(termina == 1){
+			printf("\n[ENTRA]: aqui\n");
+			break;
+		}
 		fdleitura = open(fifo,O_RDONLY);
 		printf("\n[SUCESSO]: %s aberto\n",fifo);
 		memset(buffer,'\0',sizeof(char) * 4096);
@@ -128,8 +140,9 @@ int main(int argc, char **argv)
 		printf("\nErro ao ler dados do arbitro\n");
 		exit(EXIT_FAILURE);
 		}
-		printf("\n\t[SUCESSO]: Leitura do %s bem efetuada \n",fifo);
 		close(fdleitura);
+		printf("\n\t[SUCESSO]: Leitura do %s bem efetuada \n",fifo);
+		
 		printf("\n\t[FECHADO]: Pipe do %s fechado\n",fifo);
 		printf("%s",buffer);
 		memset(resposta,'\0',sizeof(char) * 20);
@@ -158,9 +171,28 @@ int main(int argc, char **argv)
 		printf("\n\t[SUCESSO]: Escrita para o %s bem efetuada \n",fifoAux);
 		
 		printf("\n\t[FECHADO]: Pipe do %s fechado\n",fifoAux);
-	}while(strcmp(resposta,"#quit") != 0);
+		if(termina == 1)
+			break;
+	}while(strcmp(resposta,"#quit") != 0 && termina == 0);
 
-	// fazer o write do nome e receber o jogo, e depois ter um do while que fica a correr enquanto nao receber um exit ou pedir exit ao arbitro
+	// receber o resultado em que fiquei e mostrar quem foi o champinion e  imprimir, e dizer xau e adeus
+	printf("\n\t[FORA DO CICLO]: Abrir o pipe \n");
+	fdleitura = open(fifo, O_RDONLY);
+	printf("\n\t[FORA DO CICLO]: Pipe aberto\n");
+	num = read(fdleitura, &user, sizeof(Jogador));
+	printf("\n\t[FORA DO CICLO]: Leitura feita\n");
+	close(fdleitura);
+	if (num == -1)
+	{
+		printf("\nErro ao ler dados do o arbitro\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Acabei com %d pontos!\n",user.pontuacao);
+	printf("O grande vencedor deste campeonato foi....\n");
+	sleep(3);
+	printf("O jogador [%s]!!!!Parabens!\n",user.campeao);
+	printf("Obrigado por jogar este campeonato connosco!\n");
 
 	close(fd);
 

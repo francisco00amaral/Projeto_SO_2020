@@ -2,18 +2,17 @@
 #include <stdlib.h> 
 #include <time.h> 
 #include "utils.h"	
+int pontuacao=0;
 
 void recebeSIG(int sig)
 {	
-	printf("vai ser encerrado!!!");
-	kill(getpid(),SIGKILL);
-	
+	exit(pontuacao);
 }
 
 int main(){
 	setbuf(stdout,NULL);
 	int numero=0;
-	int c,pontuacao=0;
+	int c;
 	time_t t;
 	srand((unsigned) time(&t));
 	signal(SIGUSR1,recebeSIG);
@@ -33,5 +32,5 @@ int main(){
 		printf("\nErrou...try again!!!");
 	}
 
-	return (pontuacao);//mudar o jogo /nao faz sentido mandar a pontuaçao
+	return (pontuacao);
 }

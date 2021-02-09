@@ -6,7 +6,6 @@
 
 void recebeSIG(int sig)
 {	
-	printf("vai ser encerrado!!!");
 	exit(pontuacao);
 }
 
@@ -72,5 +71,5 @@ int main(){
 }
 
 
-return (pontuacao);//mudar o jogo /nao faz sentido mandar a pontuaçao
+return (pontuacao);
 }

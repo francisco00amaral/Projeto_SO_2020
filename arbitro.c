@@ -148,12 +148,15 @@ void *trataCliente(void *dados)
 
 	// thread do cliente, vai criar um named pipe, apartir daqui o cliente so comunica com este fifo...
 	printf("Thread para comunicar com o jogador %s, que tem o PID de: %d, fifo %s.\n", pdata->nome, pdata->pid, fifoCliente);
-	char *jogo1 = "g2";
-	// char *jogo2 = "nomeFIcheiro"
-	// random();
-	// swtich(
-	// 	case 1
-	// )
+	char jogo[20];
+	int a = random() % 2; // numero entre 0 e 1;
+	switch(a){
+		case 0:
+			strcpy(jogo,"g2");
+			break;
+		case 1:
+			strcpy(jogo,"jogo");
+	}
 	pipe(canal_Jogo_Arbitro);
 	pipe(canal_Arbitro_Jogo);
 	int p;
@@ -183,8 +186,8 @@ void *trataCliente(void *dados)
 		dup(canal_Arbitro_Jogo[0]);
 		close(canal_Arbitro_Jogo[0]);
 
-		execl(jogo1, jogo1, NULL);
-		printf("erroa executar jogo");
+		execl(jogo, jogo, NULL);
+		printf("erro a executar jogo");
 		exit(7);
 	}
 
@@ -208,7 +211,6 @@ void *trataCliente(void *dados)
 		}
 		printf("\n\t[SUCESSO]: Leitura do jogo bem efetuada\n");
 
-		// strcpy(buffer,"Ola jogador!");
 		printf("Recebi : %s",buffer);
 		fflush(stdout);
 		sprintf(fifoCliente, FIFO_CLI, pdata->pid);
@@ -272,6 +274,7 @@ void *trataCliente(void *dados)
 	// enviar mensagem ao jogo para terminar
 	kill(p,SIGUSR1);
 	// vou ter de mandar um sinal ao jogador para sair do ciclo.
+	kill(pdata->pid,SIGUSR2);
 	// obter a pontuacao
 	wait(&estado);
 	if (WIFEXITED(estado)){
@@ -281,6 +284,7 @@ void *trataCliente(void *dados)
 	unlink(fifoAux);
 
 	if(strcmp(resposta,"#quit") == 0){
+		printf("Jogador %s saiu!",pdata->nome);
 		pdata->ativo = -1;
 		kill(pdata->pid, SIGUSR1);
 		numJogadores--;
@@ -403,6 +407,53 @@ void avisaInicio(Jogador *jogadores)
 	}
 }
 
+Jogador mostraPosicoes(Jogador *jogadores)
+{
+	int i;
+	int j = 0;
+	int max = -1;
+	Jogador campeao;
+	char nome[20];
+	for (i = 0; i < mp; i++)
+	{
+		if (jogadores[i].ativo == 1){
+			if(max < jogadores[i].pontuacao){
+				max = jogadores[i].pontuacao; 
+				strcpy(nome,jogadores[i].nome);
+				campeao = jogadores[i];
+			}	
+			printf("Jogador [%s] com a pontuacao de %d\n", jogadores[i].nome, jogadores[i].pontuacao);
+		}
+	}
+	printf("Damos os parabens ao jogador %s que ficou em primeiro lugar com a pontuacao de %d\n",nome,max);
+	return campeao;
+}
+
+void mostraVencedor(Jogador *jogadores,Jogador campeao){
+	int i;
+	for (i = 0; i < mp; i++)
+	{
+		if (jogadores[i].ativo == 1)
+		{
+			// envio a sua pontuacao final
+			strcpy(jogadores[i].campeao,campeao.nome);
+			sprintf(fifo, FIFO_CLI, jogadores[i].pid);
+			printf("\n\t[DENTRO DA FUNCAO]: Abrir o pipe \n");
+			fdescrita = open(fifo, O_WRONLY);
+			printf("\n\t[DENTRO DA FUNCAO]: Pipe aberto\n");
+			num = write(fdescrita, &jogadores[i], sizeof(Jogador));
+			printf("\n\t[DENTRO DA FUNCAO]: Escrevi o jogador\n");
+			close(fdescrita);
+			printf("\n\t[DENTRO DA FUNCAO]: Fechei o pipe do jogador\n");
+			// printf("\n\tEnviei o %d inscrito\n",inscrito);
+			if (num == -1)
+			{
+				printf("\nErro ao enviar dados para o cliente\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+}
 void avisaClientesE(Jogador *jogadores)
 {
 	int i;
@@ -644,9 +695,16 @@ int main(int argc, char **argv)
 		fflush(stdout);
 		trataTeclado(comando, jogadores);
 
-	} while (strcmp(comando, "exit") != 0);
-
-	printf("Campeonato a terminar!\n");
+	} while (strcmp(comando, "exit") != 0 && duracao == 0);
+	printf("Campeonato terminou!\n");
+	// esperar pelas threads acabar?
+	for(int k = 0; k < numJogadores; k++){
+		pthread_join(threadTarefa[k],NULL);
+	}
+	
+	Jogador vencedor = mostraPosicoes(jogadores);
+	
+	mostraVencedor(jogadores,vencedor);
 
 	close(fd);
 

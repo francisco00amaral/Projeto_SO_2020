@@ -14,6 +14,7 @@ typedef struct{
 	int quit; // 1 sai 0 continua
 	int ativo; // se esta ativo
     int emJogo;
+	char campeao[20];
 	int pontuacao;
 	int jaExiste; // saber se nome ja existe
 }Jogador;
