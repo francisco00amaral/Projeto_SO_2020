@@ -4,7 +4,8 @@ Cliente cli;
 Jogador user;
 int termina = 0;
 
-void sigCiclo(int i){
+void sigCiclo(int i)
+{
 	printf("O campeonato terminou!");
 	termina = 1;
 }
@@ -22,7 +23,7 @@ void trataSig(int i)
 
 int main(int argc, char **argv)
 {
-	setbuf(stdout,NULL);
+	setbuf(stdout, NULL);
 	int fd, num;
 	int inscrito = 0;
 	int i = 0;
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
 	// cli.jogo = 3; // mudar isto depois;
 	// cli.prox = NULL;
 	// cli.jaExiste = 0;
-	printf("Tenho o pid %d",user.pid);
+	printf("Tenho o pid %d", user.pid);
 
 	sprintf(fifo, FIFO_CLI, user.pid);
 
@@ -79,7 +80,6 @@ int main(int argc, char **argv)
 	/* Receber resposta do servidor (read)*/
 	fdleitura = open(fifo, O_RDONLY);
 	num = read(fdleitura, &user, sizeof(Jogador));
-
 
 	if (num == -1)
 	{
@@ -114,66 +114,69 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	printf("O campeonato esta prestes a comecar!\n");
-	
-
 
 	printf("Comando disponiveis: #mygame // #quit \n");
 
 	char resposta[20];
 	char buffer[4096];
 	sprintf(fifo, FIFO_CLI, user.pid);
-	sprintf(fifoAux,FIFO_ARB,getpid());
-	do{	
-		
-		printf("\n[TERMINA ESTA A]: %d\n",termina);
+	sprintf(fifoAux, FIFO_ARB, getpid());
+	do
+	{
+
+		printf("\n[TERMINA ESTA A]: %d\n", termina);
 		sleep(0.8);
-		if(termina == 1){
+		if (termina == 1)
+		{
 			printf("\n[ENTRA]: aqui\n");
 			break;
 		}
-		fdleitura = open(fifo,O_RDONLY);
-		printf("\n[SUCESSO]: %s aberto\n",fifo);
-		memset(buffer,'\0',sizeof(char) * 4096);
-		num = read(fdleitura,&buffer,sizeof(buffer));
+		fdleitura = open(fifo, O_RDONLY);
+		printf("\n[SUCESSO]: %s aberto\n", fifo);
+		memset(buffer, '\0', sizeof(char) * 4096);
+		num = read(fdleitura, &buffer, sizeof(buffer));
 		if (num == -1)
 		{
-		printf("\nErro ao ler dados do arbitro\n");
-		exit(EXIT_FAILURE);
+			printf("\nErro ao ler dados do arbitro\n");
+			exit(EXIT_FAILURE);
 		}
 		close(fdleitura);
-		printf("\n\t[SUCESSO]: Leitura do %s bem efetuada \n",fifo);
-		
-		printf("\n\t[FECHADO]: Pipe do %s fechado\n",fifo);
-		printf("%s",buffer);
-		memset(resposta,'\0',sizeof(char) * 20);
+		printf("\n\t[SUCESSO]: Leitura do %s bem efetuada \n", fifo);
+
+		printf("\n\t[FECHADO]: Pipe do %s fechado\n", fifo);
+		printf("%s", buffer);
+		memset(resposta, '\0', sizeof(char) * 20);
 		printf("Resposta: ");
-		scanf("%s",resposta);
-		fdAux = open(fifoAux,O_WRONLY);
-		printf("\n[SUCESSO]: %s aberto\n",fifoAux);
-		
-		num = write(fdAux,&resposta,sizeof(resposta));
+		scanf("%s", resposta);
+		fdAux = open(fifoAux, O_WRONLY);
+		printf("\n[SUCESSO]: %s aberto\n", fifoAux);
+
+		num = write(fdAux, &resposta, sizeof(resposta));
 		if (num == -1)
 		{
-		printf("\nErro ao enviar dados para o arbitro\n");
-		exit(EXIT_FAILURE);
+			printf("\nErro ao enviar dados para o arbitro\n");
+			exit(EXIT_FAILURE);
 		}
 		close(fdAux);
 
-		// if(strcmp(resposta,"#mygame") == 0){
-		// char mygame[30];
-		// fdleitura = open(fifo,O_RDONLY);
-		// printf("\n[SUCESSO]: %s aberto\n",fifo);
-		// num = read(fdleitura,&mygame,sizeof(mygame));
-		// printf("\n\t[SUCESSO]: O meu jogo e: %s",mygame);
-		// close(fdleitura);
-		// }
-		
-		printf("\n\t[SUCESSO]: Escrita para o %s bem efetuada \n",fifoAux);
-		
-		printf("\n\t[FECHADO]: Pipe do %s fechado\n",fifoAux);
-		if(termina == 1)
+		if (strcmp(resposta, "#mygame") == 0)
+		{
+			char mygame[20];
+			memset(mygame, '\0', sizeof(char) * 20);
+			fdleitura = open(fifo, O_RDONLY);
+			printf("\n[SUCESSO DENTRO DO STRCMP]: %s aberto\n", fifo);
+			num = read(fdleitura, &mygame, sizeof(mygame));
+			printf("\n[LEITURA DENTRO DO STRCMP]: %s lido e recebido %s\n", fifo, mygame);
+			close(fdleitura);
+			printf("\n\t[SUCESSO DENTRO DO STRCMP ]: O meu jogo e: %s", mygame);
+		}
+
+		printf("\n\t[SUCESSO]: Escrita para o %s bem efetuada \n", fifoAux);
+
+		printf("\n\t[FECHADO]: Pipe do %s fechado\n", fifoAux);
+		if (termina == 1)
 			break;
-	}while(strcmp(resposta,"#quit") != 0 && termina == 0);
+	} while (strcmp(resposta, "#quit") != 0 && termina == 0);
 
 	// receber o resultado em que fiquei e mostrar quem foi o champinion e  imprimir, e dizer xau e adeus
 	printf("\n\t[FORA DO CICLO]: Abrir o pipe \n");
@@ -188,10 +191,10 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Acabei com %d pontos!\n",user.pontuacao);
+	printf("Acabei com %d pontos!\n", user.pontuacao);
 	printf("O grande vencedor deste campeonato foi....\n");
 	sleep(3);
-	printf("O jogador [%s]!!!!Parabens!\n",user.campeao);
+	printf("O jogador [%s]!!Parabens!\n", user.campeao);
 	printf("Obrigado por jogar este campeonato connosco!\n");
 
 	close(fd);
