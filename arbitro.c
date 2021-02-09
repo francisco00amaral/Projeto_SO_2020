@@ -107,11 +107,6 @@ void trataSig(int i)
 ////////////////////////-threads-/////////////////////////////////////
 void *CampeonatoTime(void *dados)
 {
-	// for(int i = 0;i<10;i++){
-	// 	printf("blablalblal");
-	// 	fflush(stdout);
-	// 	sleep(1);
-	// }
 	sleep(duracaoCampeonato);
 	printf("Acabou o tempo de duracao do campeonato!\n");
 	duracao = 1;
@@ -203,6 +198,7 @@ void *trataCliente(void *dados)
 	int estado;
 	do
 	{
+		printf("Duracao : %d",duracao);
 		memset(buffer,'\0',sizeof(char) * 4096);
 		res = read(canal_Jogo_Arbitro[0],&buffer,sizeof(buffer));
 		if (res == -1)
@@ -270,21 +266,25 @@ void *trataCliente(void *dados)
 		printf("\n\t[SUCESSO]: Escrita para o jogo bem efetuada \n");
 		
 		
-	} while (strcmp(resposta,"#quit") != 0);
+	} while (strcmp(resposta,"#quit") != 0 && duracao == 0);
+	printf("Thread do %s e acabou o tempo.",pdata->nome);
 
 	// enviar mensagem ao jogo para terminar
 	kill(p,SIGUSR1);
+	// vou ter de mandar um sinal ao jogador para sair do ciclo.
 	// obter a pontuacao
 	wait(&estado);
 	if (WIFEXITED(estado)){
-		pdata->pontuacao = estado;
+		pdata->pontuacao = WEXITSTATUS(estado);
 	}
+	printf("Jogador %s acabou com : %d",pdata->nome,pdata->pontuacao);
 	unlink(fifoAux);
-	pdata->ativo = -1;
-	kill(pdata->pid, SIGUSR1);
-	numJogadores--;
-	// mkfifo(fifoThread, 0600);
-	printf("Fifo para comunicar com o cliente criado\n");
+
+	if(strcmp(resposta,"#quit") == 0){
+		pdata->ativo = -1;
+		kill(pdata->pid, SIGUSR1);
+		numJogadores--;
+	}
 
 	pthread_exit(NULL);
 }
@@ -483,7 +483,6 @@ int main(int argc, char **argv)
 		printf("sintaxe: %s duracao_do_campeonato tempo_de_espera\n\n", argv[0]);
 		return (EXIT_FAILURE);
 	}
-
 	// METER ISTO NUMA FUNCAO
 	char *maxplayer;
 	maxplayer = getenv("MAXPLAYER");
